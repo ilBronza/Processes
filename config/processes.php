@@ -192,6 +192,9 @@ return [
             ['name' => 'completed', 'label' => 'Completed', 'is_final' => true, 'is_positive' => true],
             ['name' => 'cancelled', 'label' => 'Cancelled', 'is_final' => true, 'is_negative' => true],
             ['name' => 'failed', 'label' => 'Failed', 'is_final' => true, 'is_negative' => true],
+            ['name' => 'approved', 'label' => 'Approved', 'is_positive' => true],
+            ['name' => 'rejected', 'label' => 'Rejected', 'is_negative' => true],
+            ['name' => 'locked', 'label' => 'Locked', 'is_blocking' => true],
         ],
         'types' => [
             ['name' => 'production', 'label' => 'Production', 'requires_operator' => true],

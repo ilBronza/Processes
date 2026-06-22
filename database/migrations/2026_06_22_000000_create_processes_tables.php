@@ -82,15 +82,13 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('parent_id')->references('id')->on(config('processes.models.process.table'))->nullOnDelete();
-            $table->foreign('process_type_id')->references('id')->on(config('processes.models.processType.table'))->restrictOnDelete();
-            $table->foreign('process_status_id')->references('id')->on(config('processes.models.processStatus.table'))->restrictOnDelete();
+            $table->foreign('process_type_id')->references('id')->on(config('processes.models.processType.table'))->onDelete('restrict');
+            $table->foreign('process_status_id')->references('id')->on(config('processes.models.processStatus.table'))->onDelete('restrict');
 
-            $table->index(['processable_type', 'processable_id']);
-            $table->index(['toolable_type', 'toolable_id']);
-            $table->index(['external_source', 'external_id']);
-            $table->index(['operator_id', 'starts_at', 'ends_at']);
-            $table->index(['toolable_type', 'toolable_id', 'starts_at', 'ends_at']);
-            $table->index(['processable_type', 'processable_id', 'starts_at', 'ends_at']);
+            $table->index(['external_source', 'external_id'], 'processes_external_reference_idx');
+            $table->index(['operator_id', 'starts_at', 'ends_at'], 'processes_operator_range_idx');
+            $table->index(['toolable_type', 'toolable_id', 'starts_at', 'ends_at'], 'processes_toolable_range_idx');
+            $table->index(['processable_type', 'processable_id', 'starts_at', 'ends_at'], 'processes_processable_range_idx');
         });
 
         Schema::create(config('processes.models.processStatusLog.table'), function (Blueprint $table) {
@@ -106,7 +104,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('process_id')->references('id')->on(config('processes.models.process.table'))->cascadeOnDelete();
-            $table->foreign('process_status_id')->references('id')->on(config('processes.models.processStatus.table'))->restrictOnDelete();
+            $table->foreign('process_status_id')->references('id')->on(config('processes.models.processStatus.table'))->onDelete('restrict');
             $table->foreign('previous_process_status_id')->references('id')->on(config('processes.models.processStatus.table'))->nullOnDelete();
             $table->index(['process_id', 'set_at']);
         });
