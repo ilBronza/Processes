@@ -1,0 +1,36 @@
+{
+    "name": "ilbronza/processes",
+    "description": "Generic processes and operator time slots for Laravel",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Davide Bronzini",
+            "email": "davide_bronzini@hotmail.com",
+            "homepage": "https://sistema.srl"
+        }
+    ],
+    "homepage": "https://github.com/ilbronza/processes",
+    "keywords": ["Laravel", "Processes", "Operators", "Timeline"],
+    "require": {},
+    "require-dev": {},
+    "autoload": {
+        "psr-4": {
+            "IlBronza\\Processes\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "IlBronza\\Processes\\Tests\\": "tests"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "IlBronza\\Processes\\ProcessesServiceProvider"
+            ],
+            "aliases": {
+                "Processes": "IlBronza\\Processes\\Facades\\Processes"
+            }
+        }
+    }
+}
