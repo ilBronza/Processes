@@ -103,9 +103,9 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
 
-            $table->foreign('process_id')->references('id')->on(config('processes.models.process.table'))->cascadeOnDelete();
-            $table->foreign('process_status_id')->references('id')->on(config('processes.models.processStatus.table'))->onDelete('restrict');
-            $table->foreign('previous_process_status_id')->references('id')->on(config('processes.models.processStatus.table'))->nullOnDelete();
+            $table->foreign('process_id', 'proc_status_logs_process_fk')->references('id')->on(config('processes.models.process.table'))->cascadeOnDelete();
+            $table->foreign('process_status_id', 'proc_status_logs_status_fk')->references('id')->on(config('processes.models.processStatus.table'))->onDelete('restrict');
+            $table->foreign('previous_process_status_id', 'proc_status_logs_prev_status_fk')->references('id')->on(config('processes.models.processStatus.table'))->nullOnDelete();
             $table->index(['process_id', 'set_at']);
         });
 
