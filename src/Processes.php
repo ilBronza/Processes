@@ -4,9 +4,14 @@ namespace IlBronza\Processes;
 
 use IlBronza\CRUD\Providers\RouterProvider\IbRouter;
 use IlBronza\CRUD\Providers\RouterProvider\RoutedObjectInterface;
+use IlBronza\CRUD\Traits\IlBronzaPackages\IlBronzaPackagesTrait;
 
 class Processes implements RoutedObjectInterface
 {
+	use IlBronzaPackagesTrait;
+
+	static $packageConfigPrefix = 'processes';
+
     public function manageMenuButtons()
     {
         if(! $menu = app('menu'))
@@ -43,13 +48,4 @@ class Processes implements RoutedObjectInterface
             ]));
     }
 
-    public function getRoutePrefix(): ?string
-    {
-        return config('processes.routePrefix');
-    }
-
-    public static function getController(string $target, string $controllerPrefix): string
-    {
-        return config("processes.models.{$target}.controllers.{$controllerPrefix}");
-    }
 }

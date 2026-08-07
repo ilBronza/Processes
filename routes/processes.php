@@ -7,7 +7,8 @@ Route::group([
     'middleware' => config('processes.middleware', ['web', 'auth', 'processes.roles']),
     'prefix' => config('processes.route_prefix', 'processes-management'),
     'as' => config('processes.routePrefix'),
-], function () {
+    'routeTranslationPrefix' => Processes::getRouteTranslationPrefix(),
+	], function () {
     Route::group(['prefix' => 'processes'], function () {
         Route::get('', [Processes::getController('process', 'index'), 'index'])->name('processes.index');
         Route::get('create', [Processes::getController('process', 'create'), 'create'])->name('processes.create');
