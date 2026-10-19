@@ -36,16 +36,20 @@ class ProcessTreeBuilderHelper
             throw new LogicException('A process cannot be its own parent.');
 
         $current = $parent;
+        $visited = [];
 
         while($current)
         {
+            if(isset($visited[$current->getKey()]))
+                throw new LogicException('Circular process hierarchies are not allowed.');
+            $visited[$current->getKey()] = true;
             if($current->getKey() === $process->getKey())
                 throw new LogicException('Circular process hierarchies are not allowed.');
 
-            if($current->parent_id === $process->getKey())
+            if($process->getKey() !== null && $current->parent_id === $process->getKey())
                 throw new LogicException('Circular process hierarchies are not allowed.');
 
-            $current = $current->parent;
+            $current = $current->parent()->first();
         }
     }
 }

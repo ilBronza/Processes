@@ -23,8 +23,12 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "IlBronza\\Processes\\Tests\\": "tests"
-        }
+            "IlBronza\\Processes\\Tests\\": "tests",
+            "App\\": "tests/Fixtures/App/"
+        },
+        "files": [
+            "tests/helpers.php"
+        ]
     },
     "extra": {
         "laravel": {

@@ -21,8 +21,11 @@ class ProcessCreatorHelper
             $attributes['process_type_id'] = $type->getKey();
             $attributes['process_status_id'] = $status->getKey();
 
-            static::validateRequirements($type, $attributes);
-            static::validateOverlaps($type, $attributes);
+            unset($attributes['type'], $attributes['status']);
+            $locked = (bool) ($attributes['is_locked'] ?? false);
+            $closedAt = $attributes['closed_at'] ?? null;
+            unset($attributes['is_locked'], $attributes['locked_at'], $attributes['locked_by_user_id'],
+                $attributes['closed_at'], $attributes['closed_by_user_id']);
 
             $process = Process::getProjectClassName()::create($attributes);
 
@@ -37,6 +40,11 @@ class ProcessCreatorHelper
                     'data' => $options['data'] ?? null,
                     'notes' => $options['notes'] ?? null,
                 ]);
+
+            if($closedAt)
+                ProcessCloserHelper::close($process, array_merge($options, ['closed_at' => $closedAt]));
+            if($locked)
+                ProcessLockerHelper::lock($process, $options['user'] ?? null);
 
             return $process;
         });
@@ -65,51 +73,6 @@ class ProcessCreatorHelper
             return $type->defaultStatus;
 
         return ProcessStatus::getProjectClassName()::query()->initial()->active()->ordered()->firstOrFail();
-    }
-
-    protected static function validateRequirements(ProcessType $type, array $attributes): void
-    {
-        if($type->requires_operator && ! ($attributes['operator_id'] ?? null))
-            throw new InvalidArgumentException('This process type requires an operator.');
-
-        if($type->requires_tool && ! (($attributes['toolable_type'] ?? null) && ($attributes['toolable_id'] ?? null)))
-            throw new InvalidArgumentException('This process type requires a tool.');
-
-        if($type->requires_processable && ! (($attributes['processable_type'] ?? null) && ($attributes['processable_id'] ?? null)))
-            throw new InvalidArgumentException('This process type requires a related processable object.');
-    }
-
-    protected static function validateOverlaps(ProcessType $type, array $attributes): void
-    {
-        if(! config('processes.behavior.validate_overlaps', true))
-            return;
-
-        if($type->allows_overlaps)
-            return;
-
-        if(! (($attributes['starts_at'] ?? null) && ($attributes['ends_at'] ?? null)))
-            return;
-
-        if($operatorId = $attributes['operator_id'] ?? null)
-            if(ProcessOverlapCheckerHelper::hasOperatorOverlaps($operatorId, $attributes['starts_at'], $attributes['ends_at']))
-                throw new InvalidArgumentException('The selected operator has overlapping processes.');
-
-        if(($attributes['toolable_type'] ?? null) && ($attributes['toolable_id'] ?? null))
-            if(static::hasMorphOverlaps('toolable', $attributes, $attributes['starts_at'], $attributes['ends_at']))
-                throw new InvalidArgumentException('The selected tool has overlapping processes.');
-
-        if(($attributes['processable_type'] ?? null) && ($attributes['processable_id'] ?? null))
-            if(static::hasMorphOverlaps('processable', $attributes, $attributes['starts_at'], $attributes['ends_at']))
-                throw new InvalidArgumentException('The selected processable object has overlapping processes.');
-    }
-
-    protected static function hasMorphOverlaps(string $morph, array $attributes, mixed $startsAt, mixed $endsAt): bool
-    {
-        return Process::getProjectClassName()::query()
-            ->where("{$morph}_type", $attributes["{$morph}_type"])
-            ->where("{$morph}_id", $attributes["{$morph}_id"])
-            ->overlapping($startsAt, $endsAt)
-            ->exists();
     }
 
     protected static function resolveUserId(Model|string|null $user): ?string

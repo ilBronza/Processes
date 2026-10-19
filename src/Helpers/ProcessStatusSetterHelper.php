@@ -8,7 +8,6 @@ use IlBronza\Processes\Models\ProcessStatus;
 use IlBronza\Processes\Models\ProcessStatusLog;
 use IlBronza\Processes\Models\ProcessStatusTransition;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 use LogicException;
@@ -30,7 +29,7 @@ class ProcessStatusSetterHelper
         if(config('processes.behavior.validate_transitions', true))
             static::validateTransition($transition, $options);
 
-        return DB::transaction(function () use ($process, $status, $options) {
+        return $process->getConnection()->transaction(function () use ($process, $status, $options) {
             $previousStatusId = $process->process_status_id;
             $setAt = Carbon::parse($options['set_at'] ?? now());
 
@@ -96,7 +95,7 @@ class ProcessStatusSetterHelper
         if(! $transition || ! $transition->is_allowed)
             throw new LogicException('This process status transition is not allowed.');
 
-        if($transition->requires_reason && ! ($options['reason'] ?? null))
+        if($transition->requires_reason && trim($options['reason'] ?? '') === '')
             throw new LogicException('This process status transition requires a reason.');
 
         if($permission = $transition->requires_permission)

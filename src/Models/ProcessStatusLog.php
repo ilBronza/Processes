@@ -13,6 +13,17 @@ class ProcessStatusLog extends ProcessPackageBaseModel
         'data' => 'array',
     ];
 
+    // The audit table has no deleted_at column. Its rows are removed by the
+    // process foreign key cascade, not by the base model's SoftDeletes scope.
+    public static function bootSoftDeletes()
+    {
+    }
+
+    protected function performDeleteOnModel()
+    {
+        throw new \LogicException('Process status logs cannot be deleted directly.');
+    }
+
     public function process()
     {
         return $this->belongsTo(Process::getProjectClassName(), 'process_id');

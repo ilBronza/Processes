@@ -4,6 +4,7 @@ namespace IlBronza\Processes\Models;
 
 use Carbon\Carbon;
 use IlBronza\Processes\Helpers\ProcessDurationCalculatorHelper;
+use IlBronza\Processes\Helpers\ProcessValidatorHelper;
 use IlBronza\Processes\Traits\HasProcessStatusLogs;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -42,6 +43,7 @@ class Process extends ProcessPackageBaseModel
     protected static function booted(): void
     {
         static::saving(function (self $process) {
+            ProcessValidatorHelper::validate($process);
             ProcessDurationCalculatorHelper::fillDurations($process);
         });
 
@@ -58,6 +60,7 @@ class Process extends ProcessPackageBaseModel
 
     public static function allowingStatusUpdate(callable $callback): mixed
     {
+        $previous = static::$allowsDirectStatusUpdate;
         static::$allowsDirectStatusUpdate = true;
 
         try
@@ -66,12 +69,13 @@ class Process extends ProcessPackageBaseModel
         }
         finally
         {
-            static::$allowsDirectStatusUpdate = false;
+            static::$allowsDirectStatusUpdate = $previous;
         }
     }
 
     public static function allowingLockedUpdate(callable $callback): mixed
     {
+        $previous = static::$allowsLockedUpdate;
         static::$allowsLockedUpdate = true;
 
         try
@@ -80,7 +84,7 @@ class Process extends ProcessPackageBaseModel
         }
         finally
         {
-            static::$allowsLockedUpdate = false;
+            static::$allowsLockedUpdate = $previous;
         }
     }
 
@@ -198,12 +202,31 @@ class Process extends ProcessPackageBaseModel
             ->where('planned_ends_at', '<=', Carbon::parse($endsAt));
     }
 
-    public function scopeOverlapping(Builder $query, mixed $startsAt, mixed $endsAt): void
+    public function scopeOverlapping(Builder $query, mixed $startsAt, mixed $endsAt, string $prefix = ''): void
     {
-        $query->whereNotNull('starts_at')
-            ->whereNotNull('ends_at')
-            ->where('starts_at', '<', Carbon::parse($endsAt))
-            ->where('ends_at', '>', Carbon::parse($startsAt));
+        if(! in_array($prefix, ['', 'planned_'], true))
+            throw new \InvalidArgumentException('Invalid process schedule.');
+
+        $start = $prefix . 'starts_at';
+        $end = $prefix . 'ends_at';
+        $query->whereNotNull($start)
+            ->where(function (Builder $query) use ($start, $end) {
+                $query->whereNull($end)->orWhereColumn($end, '>', $start);
+            });
+
+        if($endsAt !== null)
+        {
+            if(Carbon::parse($endsAt)->lessThanOrEqualTo(Carbon::parse($startsAt)))
+            {
+                $query->whereRaw('1 = 0');
+                return;
+            }
+            $query->where($start, '<', Carbon::parse($endsAt));
+        }
+
+        $query->where(function (Builder $query) use ($end, $startsAt) {
+            $query->whereNull($end)->orWhere($end, '>', Carbon::parse($startsAt));
+        });
     }
 
     public function scopeRoots(Builder $query): void
