@@ -9,10 +9,12 @@ use IlBronza\CRUD\Traits\CRUDIndexTrait;
 use IlBronza\CRUD\Traits\CRUDPlainIndexTrait;
 use IlBronza\CRUD\Traits\CRUDRelationshipTrait;
 use IlBronza\CRUD\Traits\CRUDShowTrait;
-use IlBronza\Processes\Helpers\ProcessStatusSetterHelper;
+use IlBronza\CRUD\Helpers\CrudRequestHelper;
+use IlBronza\Processes\Helpers\Crud\ProcessCrudStorer;
+use IlBronza\Processes\Helpers\Crud\ProcessCrudUpdater;
+use IlBronza\Processes\Helpers\Crud\ProcessCrudEditor;
 use IlBronza\Processes\Http\Controllers\CrudProcessesCrudController;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ProcessCrudController extends CrudProcessesCrudController
 {
@@ -46,25 +48,57 @@ class ProcessCrudController extends CrudProcessesCrudController
 
     public function update(Request $request, string $process)
     {
-        $process = $this->findModel($process);
-        $targetStatusId = $request->input('process_status_id');
-        $shouldChangeStatus = $targetStatusId && ($targetStatusId !== $process->process_status_id);
+        return $this->_update($request, $this->findModel($process));
+    }
 
-        if(! $shouldChangeStatus)
-            return $this->_update($request, $process);
+    public function getUpdaterHelperClassName(): string
+    {
+        return ProcessCrudUpdater::class;
+    }
 
-        return DB::transaction(function () use ($request, $process, $targetStatusId) {
-            $request->merge(['process_status_id' => $process->process_status_id]);
+    public function _store(Request $request)
+    {
+        $this->checkUserStoringRights();
+        $this->modelInstance = ProcessCrudStorer::saveByRequest(
+            $this->makeModel(), $this->getStoreParametersClass(), $request
+        );
+        $this->sendStoreSuccessMessage();
+        $this->performAdditionalOperations();
 
-            $response = $this->_update($request, $process);
+        if($this->shouldCloseIframeAfterStore($request))
+            return $this->closeIframeAfterStore($request);
+        if(CrudRequestHelper::isSaveAndCopy($request))
+            return redirect()->to($this->modelInstance->getEditUrl());
 
-            ProcessStatusSetterHelper::setStatus($process->refresh(), $targetStatusId, [
-                'reason' => $request->input('status_reason'),
-                'user' => auth()->user(),
-            ]);
+        return redirect()->to($this->getAfterStoredRedirectUrl());
+    }
 
-            return $response;
-        });
+    public function updateEditorBatch(Request $request)
+    {
+        return ProcessCrudEditor::saveBatchByRequest(
+            $this->getModel(), $this->getUpdateParametersClass(), $request,
+            $this->getUpdateEvents(), $this->getUpdateCallback()
+        );
+    }
+
+    private function manageUpdateGeneric(Request $request)
+    {
+        $this->modelInstance = ProcessCrudEditor::saveByRequest(
+            $this->getModel(), $this->getUpdateParametersClass(), $request
+        );
+        $this->broadcastCrudModel($this->modelInstance, 'updated');
+        $field = $request->input('field');
+        $result = [
+            'success' => true, 'update-editor' => true, 'model-id' => $this->getModel()->getKey(),
+            'field' => $field, 'value' => $this->getModel()->{$field}, $field => $this->getModel()->{$field},
+        ];
+        if($action = $this->getUpdatingFormFieldInstance($request)->getEditorAction())
+        {
+            $result['ibaction'] = true;
+            $result['action'] = $action;
+        }
+
+        return $this->returnUpdateParameters($request, $result);
     }
 
     public function destroy(string $process)

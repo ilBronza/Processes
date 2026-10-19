@@ -57,6 +57,7 @@ return [
     'notes' => 'Note',
     'set_at' => 'Impostato il',
     'reason' => 'Motivo',
+    'status_reason' => 'Motivo del cambio di stato',
     'previous_process_status_id' => 'Stato precedente',
     'process_status_id' => 'Stato',
     'from_status_id' => 'Da stato',
